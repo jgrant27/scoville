@@ -1,0 +1,6 @@
+.aider*
+.env
+/**/*~
+/setup_scoville.sh
+/bin/
+/scoville_progress.json
