@@ -48,19 +48,18 @@ type model struct {
 	phaseTotal   int
 }
 
-func InitialModel(bot *engine.Bot) model {
+func InitialModel(bot *engine.Bot, s state.Progress, initialLogs []string) model {
 	vp := viewport.New(0, 0)
 	vp.YPosition = 0
-
-	s := state.Load()
 
 	return model{
 		bot:             bot,
 		progress:        progress.New(progress.WithDefaultGradient()),
 		viewport:        vp,
-		logs:            []string{"Initializing Scoville TUI..."},
+		logs:            initialLogs,
 		isPaused:        s.IsPaused,
-		missionComplete: false,
+		missionComplete: s.CurrentPhase > 3,
+		currentPhase:    s.CurrentPhase,
 	}
 }
 
@@ -107,6 +106,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -121,13 +124,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case engine.UIUpdate:
 		if msg.LogLine != "" {
+			wasAtBottom := m.viewport.AtBottom()
 			m.logs = append(m.logs, msg.LogLine)
 			// Keep log size manageable
 			if len(m.logs) > 100 {
 				m.logs = m.logs[len(m.logs)-100:]
 			}
 			m.viewport.SetContent(strings.Join(m.logs, "\n"))
-			m.viewport.GotoBottom()
+			if wasAtBottom {
+				m.viewport.GotoBottom()
+			}
 		}
 
 		m.isPaused = msg.Progress.IsPaused
@@ -135,7 +141,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.phaseCount = msg.PhaseCurrent
 		m.phaseTotal = msg.PhaseTotal
 
-		if !m.missionComplete && m.currentPhase == 3 && m.phaseTotal > 0 && m.phaseCount >= m.phaseTotal {
+		isPhase3Complete := m.currentPhase == 3 && m.phaseTotal > 0 && m.phaseCount >= m.phaseTotal
+		isMissionFinished := m.currentPhase > 3 // Phase 4 means done
+
+		if !m.missionComplete && (isPhase3Complete || isMissionFinished) {
 			m.missionComplete = true
 			m.logs = append(m.logs, "✅ Mission Complete. Press Q to quit.")
 			m.viewport.SetContent(strings.Join(m.logs, "\n"))
@@ -171,13 +180,13 @@ func (m model) View() string {
 
 	// 1. Top Half: Status Dashboard
 	phaseName := "Initializing"
-	if m.currentPhase == 1 {
+	if m.missionComplete {
+		phaseName = "🏁 MISSION COMPLETE"
+	} else if m.currentPhase == 1 {
 		phaseName = "🐋 PHASE 1: WHALES"
-	}
-	if m.currentPhase == 2 {
+	} else if m.currentPhase == 2 {
 		phaseName = "🐟 PHASE 2: RETAIL"
-	}
-	if m.currentPhase == 3 {
+	} else if m.currentPhase == 3 {
 		phaseName = "🔒 PHASE 3: LIQUIDITY"
 	}
 
@@ -192,9 +201,9 @@ func (m model) View() string {
 	logView := boxStyle.Render(m.viewport.View())
 
 	// 3. Footer
-	help := subtleStyle.Render("Q: Quit | P: Pause/Resume")
+	help := subtleStyle.Render("Q: Quit | P: Pause/Resume | ↑/↓: Scroll")
 	if m.isPaused {
-		help = subtleStyle.Render("Q: Quit | P: Resume | PAUSED")
+		help = subtleStyle.Render("Q: Quit | P: Resume | PAUSED | ↑/↓: Scroll")
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, statusView, logView, help)

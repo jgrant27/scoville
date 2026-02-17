@@ -25,8 +25,7 @@ type Bot struct {
 	StopCh   chan bool // Receives stop signal
 }
 
-func New(cfg *config.Config) *Bot {
-	s := state.Load()
+func New(cfg *config.Config, s state.Progress) *Bot {
 	return &Bot{
 		cfg:      cfg,
 		state:    s,
@@ -38,10 +37,13 @@ func New(cfg *config.Config) *Bot {
 
 func (b *Bot) Run() {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	
+
 	// Phase Constants
 	whaleCount := 3
 	retailCount := 15
+	if !b.cfg.EnableLiquidityPhase {
+		retailCount += 5 // Reallocate LP budget to more retail buys
+	}
 
 	// --- PHASE 1: WHALES ---
 	if b.state.CurrentPhase == 1 {
@@ -49,14 +51,15 @@ func (b *Bot) Run() {
 		for i := b.state.WhaleIndex; i < whaleCount; i++ {
 			b.checkControlSignals()
 
-			amount := 200.0 + r.Float64()*300.0
+			whaleRange := b.cfg.WhaleBuyMax - b.cfg.WhaleBuyMin
+			amount := b.cfg.WhaleBuyMin + r.Float64()*whaleRange
 			b.simulateTrade(fmt.Sprintf("Whale_%d", i+1), amount)
-			
+
 			// Update State
 			b.state.WhaleIndex = i + 1
 			b.state.TotalSpent += amount
 			state.Save(b.state)
-			
+
 			// Emit Update
 			b.UpdateCh <- UIUpdate{
 				LogLine:      fmt.Sprintf("Whale %d bought $%.2f", i+1, amount),
@@ -76,7 +79,8 @@ func (b *Bot) Run() {
 		for i := b.state.RetailIndex; i < retailCount; i++ {
 			b.checkControlSignals()
 
-			amount := 20.0 + r.Float64()*30.0
+			retailRange := b.cfg.RetailBuyMax - b.cfg.RetailBuyMin
+			amount := b.cfg.RetailBuyMin + r.Float64()*retailRange
 			b.simulateTrade(fmt.Sprintf("Retail_%d", i+1), amount)
 
 			b.state.RetailIndex = i + 1
@@ -91,15 +95,22 @@ func (b *Bot) Run() {
 			}
 			time.Sleep(500 * time.Millisecond)
 		}
-		b.state.CurrentPhase = 3
-		state.Save(b.state)
+
+		if b.cfg.EnableLiquidityPhase {
+			b.state.CurrentPhase = 3
+			state.Save(b.state)
+		} else {
+			b.state.CurrentPhase = 4 // Done
+			state.Save(b.state)
+			b.log("✅ MISSION COMPLETE.")
+		}
 	}
 
 	// --- PHASE 3: LP ---
 	if b.state.CurrentPhase == 3 {
 		b.checkControlSignals()
 		b.log("🔒 Entering Phase 3: Liquidity Injection")
-		
+
 		b.UpdateCh <- UIUpdate{
 			LogLine:      "Adding Liquidity to Pool...",
 			Progress:     b.state,
@@ -107,7 +118,7 @@ func (b *Bot) Run() {
 			PhaseCurrent: 1,
 		}
 		time.Sleep(2 * time.Second)
-		
+
 		b.log("✅ LIQUIDITY ADDED. MISSION COMPLETE.")
 		b.state.CurrentPhase = 4 // Done
 		state.Save(b.state)
@@ -123,10 +134,10 @@ func (b *Bot) checkControlSignals() {
 			b.log("⏸️  PROCESS PAUSED. Waiting for resume...")
 			// Block until resumed
 			for p := range b.PauseCh {
-				if !p { 
+				if !p {
 					b.log("▶️  RESUMED.")
 					b.state.IsPaused = false
-					break 
+					break
 				}
 			}
 		}

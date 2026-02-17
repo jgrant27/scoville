@@ -20,8 +20,8 @@ The bot executes a strategy divided into three main phases:
 2.  **🐟 Phase 2: Retail Velocity**
     Following the whale buys, this phase simulates a larger number of smaller, more frequent buys. This activity is designed to mimic retail investor interest, filling in gaps in the price chart and creating a sense of organic momentum.
 
-3.  **🔒 Phase 3: Liquidity Provision**
-    The final phase focuses on establishing and supporting the token's liquidity on a decentralized exchange. This ensures market stability at the new price level. (Note: The core logic for this phase is a placeholder in the current version).
+3.  **🔒 Phase 3: Liquidity Provision (Optional)**
+    This phase is controlled by the `ENABLE_LIQUIDITY_PHASE` setting. If enabled, it focuses on establishing and supporting the token's liquidity on a decentralized exchange to ensure market stability at the new price level.
 
 ## Getting Started
 
@@ -79,20 +79,21 @@ While the application is running, you can use the following keys:
 
 All configuration is handled in the `.env` file.
 
-| Variable         | Description                                                                                                                              | Example                                                   |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| **RPC_URL**      | Your connection to the blockchain. Get a free key from a provider like Infura, Alchemy, or QuickNode.                                      | `https://mainnet.infura.io/v3/YOUR_API_KEY_HERE`          |
-| **CHAIN_ID**     | The ID of the target blockchain (e.g., 1 for Ethereum Mainnet, 8453 for Base, 137 for Polygon).                                            | `1`                                                       |
-| **PRIVATE_KEY**  | **CRITICAL:** The private key of the wallet that will execute the trades. For security, this **must** be a fresh wallet funded only with the necessary ETH (for gas) and stablecoins (for buys). **DO NOT** use a personal or deployer wallet. | `0000...0000`                                             |
-| **TOKEN_ADDRESS**| The contract address of the token you are targeting.                                                                                       | `0xbb7cd730bded5c83190bc6b0b2c697a440eff465`              |
-| **ROUTER_ADDRESS** | The contract address of the DEX router (e.g., Uniswap V2, SushiSwap).                                                                    | `0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D`              |
-| **TARGET_PRICE** | The target price in USD that you want the token to reach. The simulation will run until this goal is met or the budget is exhausted.      | `0.00075`                                                 |
-| **TOTAL_BUDGET** | The total amount of USD (in stablecoins) allocated to this entire strategy.                                                                | `3000.0`                                                  |
-| **WHALE_BUY_MIN**| The minimum USD value for a single Phase 1 "whale" buy.                                                                                    | `200.0`                                                   |
-| **WHALE_BUY_MAX**| The maximum USD value for a single Phase 1 "whale" buy. The actual amount will be a random value between min and max.                       | `500.0`                                                   |
-| **RETAIL_BUY_MIN** | The minimum USD value for a single Phase 2 "retail" buy.                                                                                 | `20.0`                                                    |
-| **RETAIL_BUY_MAX** | The maximum USD value for a single Phase 2 "retail" buy. The actual amount will be a random value between min and max.                    | `50.0`                                                    |
-| **PAPER_MODE**   | Set to `true` to simulate all trades (no real funds spent). Set to `false` to enable live trading. The `make run` commands manage this for you. | `true`                                                    |
+| Variable                  | Description                                                                                                                              | Example                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **RPC_URL**               | Your connection to the blockchain. Get a free key from a provider like Infura, Alchemy, or QuickNode.                                      | `https://mainnet.infura.io/v3/YOUR_API_KEY_HERE`          |
+| **CHAIN_ID**              | The ID of the target blockchain (e.g., 1 for Ethereum Mainnet, 8453 for Base, 137 for Polygon).                                            | `1`                                                       |
+| **PRIVATE_KEY**           | **CRITICAL:** The private key of the wallet that will execute the trades. For security, this **must** be a fresh wallet funded only with the necessary ETH (for gas) and stablecoins (for buys). **DO NOT** use a personal or deployer wallet. | `0000...0000`                                             |
+| **TOKEN_ADDRESS**         | The contract address of the token you are targeting.                                                                                       | `0x83e8fb8d8176224fcc828edc73e152ec1818a2da`              |
+| **ROUTER_ADDRESS**        | The contract address of the DEX router (e.g., Uniswap V2, SushiSwap).                                                                    | `0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D`              |
+| **TARGET_PRICE**          | The target price in USD that you want the token to reach. The simulation will run until this goal is met or the budget is exhausted.      | `0.00075`                                                 |
+| **TOTAL_BUDGET**          | The total amount of USD (in stablecoins) allocated to this entire strategy.                                                                | `3000.0`                                                  |
+| **WHALE_BUY_MIN**         | The minimum USD value for a single Phase 1 "whale" buy.                                                                                    | `200.0`                                                   |
+| **WHALE_BUY_MAX**         | The maximum USD value for a single Phase 1 "whale" buy. The actual amount will be a random value between min and max.                       | `500.0`                                                   |
+| **RETAIL_BUY_MIN**        | The minimum USD value for a single Phase 2 "retail" buy.                                                                                 | `20.0`                                                    |
+| **RETAIL_BUY_MAX**        | The maximum USD value for a single Phase 2 "retail" buy. The actual amount will be a random value between min and max.                    | `50.0`                                                    |
+| **ENABLE_LIQUIDITY_PHASE**| If `false`, the bot will increase Phase 2 buys and finish. If `true`, the bot will proceed to Phase 3.                                   | `false`                                                   |
+| **PAPER_MODE**            | Set to `true` to simulate all trades (no real funds spent). Set to `false` to enable live trading. The `make run` commands manage this for you. | `true`                                                    |
 
 ---
 
